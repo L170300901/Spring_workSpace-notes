@@ -1,8 +1,7 @@
 
-## 계시판을 생성하는 프로젝트 시작
+계시판을 생성하는 프로젝트 시작
 
-[1강 ]
-# 3 Layer (= 3 Tier) 구조
+3 Layer (= 3 Tier) 구조
 
 	1. Prasentation Layer 
 	- View ( Controller > Model을 반환 )
@@ -13,9 +12,9 @@
 
 ===================================================================
 
-# My Batis 연동 및 사용
-# 트랜젝션 & 파일 업로드 다운로드
-# 스프링 JDBC # Restfull # Ajax
+My Batis 연동 및 사용
+트랜젝션 & 파일 업로드 다운로드
+스프링 JDBC # Restfull # Ajax
 
 [ DB 오라클 사용 예정 ] [ My sql 유료라 패스 ]
 
@@ -41,17 +40,17 @@ CREATE TABLE SCOTT.MVC_BBS (
 
 CREATE SEQUENCE SEQ_BBS;
 
-# 테스트용 값 넣어보기
+테스트용 값 넣어보기
 INSERT INTO MVC_BBS(BNO, BNAME, BSUBJECT, BCONTENT, BHIT, BGROUP, BSTEP, BINDENT) 
 VALUES(SEQ_BBS.NEXTVAL, '정다기', '안녕하세요', '내가 잘못하고 있는건가?', 0, SEQ_BBS.NEXTVAL,0, 0)
 
 
 
-##  STS  [ 프로젝트 생성 : Spring Lagacy Project 생성 [ Spring MVC Project ] ]
+STS  [ 프로젝트 생성 : Spring Lagacy Project 생성 [ Spring MVC Project ] ]
 ( 프로젝트명 springBBS )
 
 ================================================================
-## 인코딩 필터 처리 
+인코딩 필터 처리 
 
 [Web.xml 파일]
 
@@ -94,7 +93,7 @@ VALUES(SEQ_BBS.NEXTVAL, '정다기', '안녕하세요', '내가 잘못하고 있
 		○ bDAO.java 
 	• bbsVO 패키지 구성
 		○ bVO.java 
-## 뷰 
+뷰 
 	list.jsp : 게시판  리스트
 	writeForm.jsp : 글쓰기 폼 페이지
 	contentView.jsp : 내용보기 페이지 / 수정 폼 페이지

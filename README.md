@@ -1,4 +1,3 @@
-# Spring_workSpace-notes
 
 ## 계시판을 생성하는 프로젝트 시작
 
@@ -100,7 +99,4 @@ VALUES(SEQ_BBS.NEXTVAL, '정다기', '안녕하세요', '내가 잘못하고 있
 	writeForm.jsp : 글쓰기 폼 페이지
 	contentView.jsp : 내용보기 페이지 / 수정 폼 페이지
 
-
-
-![image](https://user-images.githubusercontent.com/48202197/196461248-01e92545-ce3c-4e0d-b9c9-472614aa8f36.png)
 

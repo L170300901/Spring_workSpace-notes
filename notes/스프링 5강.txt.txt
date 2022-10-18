@@ -1,0 +1,227 @@
+## AOP Aspect Oriented Programming  [ 시스템에서 공통적으로 사용되는 기능을 특정 객체로 분리해서 개발하는 방법론 ]
+[ SF, DAO 영역에 사용됨 ]
+
+	1. Logger 
+	2. Transaction 
+	3. Exception 
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+# 공통 로직 [ 공통 관심사 ] -----> LoggingAdvice 
+cross cutting concern
+[ 앞뒤 로깅, 트랜젝션 처리, 예외처리 ]
+
+	> 공통 관심사  -----> LoggingAdvice 
+	> 공통 관심사  -----> DataAccessThrowAdvice
+	> 공통 관심사  -----> TranctionAdvice 
+
+-------------------------------------------------------------
+
+
+# 주요 업무 로직 [ 핵심 업무 로직 ]
+core business logic  ---- Target Class ( 예 UserServiceImpl )
+
+SF ( 업무적인 로직을 모두 처리 ) - 트렌젝션 처리 
+
+
+-------------------------------------------------------------
+[ 스프링 컨테이너가 자동적으로 제작하는 proxy 객체를 이용해서 처리 ]
+Proxy - [ 핵심 업무 로직 ] + [ 공통 관심사 로직 ] 객체들을 모아서 사용하게 도와준다
+
+
+--------------------------------------------------------------------------------------------------------------------------------------
+[ 회계 프로젝트의 예문을 바탕으로 학습 내용을 정리 하도록 하겠다 ]
+
+V [ 화면 ] --> C [ 컨트롤러 ] --> M [ DB ]
+
+
+[ web.xml 파일 ]
+
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://xmlns.jcp.org/xml/ns/javaee" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd" version="4.0">
+ 
+
+  <welcome-file-list>
+    <welcome-file>/WEB-INF/jsp/hello.jsp</welcome-file>
+  </welcome-file-list>
+
+
+=================================================================================
+=================================================================================
+
+
+ <context-param>
+    <param-name>contextConfigLocation</param-name>
+    <param-value>
+            /WEB-INF/config/application/applicationContext.xml
+            /WEB-INF/config/application/applicationContext-aop.xml
+            /WEB-INF/config/application/applicationContext-jdbc.xml
+            /WEB-INF/config/application/applicationContext-statement.xml
+            /WEB-INF/config/application/applicationContext-account.xml
+            /WEB-INF/config/application/applicationContext-base.xml
+            /WEB-INF/config/application/applicationContext-hr.xml
+            /WEB-INF/config/application/applicationContext-company.xml
+        </param-value>
+  </context-param>
+
+  <listener> // Model을 담당하는 객체들을 처리하는 contextConfigLocation를 호출
+    <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+  </listener>
+
+
+=================================================================================
+=================================================================================
+
+
+## 필터 총 3개 
+
+  <filter> 1번 필터 sitemesh
+    <filter-name>siteMeshFilter</filter-name>
+    <filter-class>org.sitemesh.config.ConfigurableSiteMeshFilter</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>siteMeshFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+
+
+  <filter> 2번 필터 encording
+    <filter-name>encodingFilter</filter-name>
+    <filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+    <init-param>
+      <param-name>encoding</param-name>
+      <param-value>UTF-8</param-value>
+    </init-param>
+  </filter>
+  <filter-mapping>
+    <filter-name>encodingFilter</filter-name>
+    <url-pattern>*.do</url-pattern>
+  </filter-mapping>
+
+
+  <filter> 3번 필터 login
+    <filter-name>loginFilter</filter-name>
+    <filter-class>net.plang.HoWooAccount.common.filter.loginFilter</filter-class>
+    <init-param>
+      <param-name>loginPage</param-name>
+      <param-value>/loginForm.html</param-value>
+    </init-param>
+    <init-param>
+      <param-name>movePage</param-name>
+      <param-value>/hello.html</param-value>
+    </init-param>
+  </filter>
+  <filter-mapping>
+    <filter-name>loginFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+
+=================================================================================
+=================================================================================
+
+
+
+## 서블릿  총 6개 - [ 각각의 서블릿 마다 xml 파일 셋팅이 필요함 ] 
+
+<servlet> 1번 서블릿 main
+    <servlet-name>main</servlet-name>
+    <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+	    <init-param>
+	      <param-name>contextConfigLocation</param-name>
+	      <param-value>/WEB-INF/config/servlet/servlet-main.xml</param-value>
+	    </init-param>
+	    <load-on-startup>1</load-on-startup>
+  </servlet>
+  <servlet-mapping>
+	    <servlet-name>main</servlet-name>
+	    <url-pattern>*.html</url-pattern>
+	    <url-pattern>*.do</url-pattern>
+	    <url-pattern>*.ajax</url-pattern>
+  </servlet-mapping>
+
+
+  <servlet> 2번 서블릿 statment
+    <servlet-name>statement</servlet-name>
+    <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+	    <init-param>
+	      <param-name>contextConfigLocation</param-name>
+	      <param-value>/WEB-INF/config/servlet/servlet-statement.xml</param-value>
+	    </init-param>
+	    <load-on-startup>1</load-on-startup>
+  </servlet>
+  <servlet-mapping>
+	    <servlet-name>statement</servlet-name>
+	    <url-pattern>/statement/*</url-pattern>
+  </servlet-mapping>
+
+
+  <servlet> 3번 서블릿 base 
+    <servlet-name>base</servlet-name>
+    <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+	    <init-param>
+	      <param-name>contextConfigLocation</param-name>
+	      <param-value>/WEB-INF/config/servlet/servlet-base.xml</param-value>
+	    </init-param>
+	    <load-on-startup>1</load-on-startup>
+  </servlet>
+  <servlet-mapping>
+	    <servlet-name>base</servlet-name>
+	    <url-pattern>/base/*</url-pattern>
+  </servlet-mapping>
+
+
+  <servlet> 4번 서블릿 hr
+    <servlet-name>hr</servlet-name>
+    <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+	    <init-param>
+	      <param-name>contextConfigLocation</param-name>
+	      <param-value>/WEB-INF/config/servlet/servlet-hr.xml</param-value>
+	    </init-param>
+	    <load-on-startup>1</load-on-startup>
+  </servlet>
+  <servlet-mapping>
+	    <servlet-name>hr</servlet-name>
+	    <url-pattern>/hr/*</url-pattern>
+  </servlet-mapping>
+
+
+  <servlet> 5번 서블릿company
+    <servlet-name>company</servlet-name>
+    <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+	    <init-param>
+	      <param-name>contextConfigLocation</param-name>
+	      <param-value>/WEB-INF/config/servlet/servlet-company.xml</param-value>
+	    </init-param>
+	    <load-on-startup>1</load-on-startup>
+  </servlet>
+  <servlet-mapping>
+	    <servlet-name>company</servlet-name>
+	    <url-pattern>/company/*</url-pattern>
+  </servlet-mapping>
+
+
+  <servlet> 6번 서블릿 account
+    <servlet-name>account</servlet-name>
+    <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+	    <init-param>
+	      <param-name>contextConfigLocation</param-name>
+	      <param-value>/WEB-INF/config/servlet/servlet-account.xml</param-value>
+	    </init-param>
+	    <load-on-startup>1</load-on-startup>
+  </servlet>
+  <servlet-mapping>
+	    <servlet-name>account</servlet-name>
+	    <url-pattern>/account/*</url-pattern>
+  </servlet-mapping>
+
+=================================================================================
+=================================================================================
+
+
+  <listener>
+	<listener-class>net.plang.HoWooAccount.common.util.UserCounter</listener-class>
+  </listener>
+
+</web-app>
+
+

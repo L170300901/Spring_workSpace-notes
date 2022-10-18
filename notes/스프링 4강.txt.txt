@@ -1,0 +1,263 @@
+## [ DataSourceTransactionManager 객체] 는 무엇을 DI (=의존적 주입)  시키고 있는가?   ->  dataSource 객체
+
+<bean id="dataSourceTransactionManager" class="net.javajigi.common.db.DataSourceTransactionManager" p:dataSource-ref="dataSource" />
+
+
+[ applicationContext.xml 파일 ]
+
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:p="http://www.springframework.org/schema/p" 
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans   
+       http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+       http://www.springframework.org/schema/context   
+	http://www.springframework.org/schema/context/spring-context-3.0.xsd
+        http://www.springframework.org/schema/aop
+       http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+       http://www.springframework.org/schema/tx
+       http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
+	   
+=============================================================================
+	[ 과제 : dbcp 2 찾아서 등록해서 사용하기 ]	   
+
+## 스프링 프레임 워크에서는 dataSource 객체를 xml 파일 내부에서 DI (=의존적 주입) 하고 있다 
+[ 이런식으로 객체를 처리하면 어떤 WAS를 사용하더라도 별도의 코드 변화를 줄 필요가 없다 (properties 파일 속성 값만 변경) ]
+	   
+	<context:property-placeholder location="/WEB-INF/config/jdbc.properties" />  // xml 파일 내부에서 사용하겠다 
+	
+	
+		# [ jdbc.properties 파일 ] 확장성을 높이기 위해서 사용
+		 [ 속성 ] = [ 값 ]
+		jdbc.driver=oracle.jdbc.OracleDriver [ 연동 드라이버 ]
+		jdbc.url=jdbc:oracle:thin:@//localhost:1521/xe [ 경로 및 서비스 아이디 ]
+		jdbc.username=scott [ 아이디 ]
+		jdbc.password=tiger [ 비번 ]
+		jdbc.maxActive=20 [ 최대 연결 객체 수 ]
+		jdbc.maxIdle=5 [ 커넥션 풀에 최대 유지 연결 객체 수 ]
+		jdbc.maxWait=10000 [ 최대 대기 시간 ]
+		
+	
+	##  dataSource 객체 ( 연결 객체를 생성하고 전달해주는 객체 )
+	
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">  // [commons] 공통적으로 사용할 소스
+	
+		// sever.xml에 셋팅한 값들을 여기서 셋팅해준다 [ dataSource 객체는 이제는 스프링 컨테이너에 저장해서 사용한다  ]
+		<property name="driverClassName" value="${jdbc.driver}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+		<property name="maxActive" value="${jdbc.maxActive}" />
+		<property name="maxIdle" value="${jdbc.maxIdle}" />
+		<property name="maxWait" value="${jdbc.maxWait}" />
+		
+	</bean>
+	
+==============================================================================	
+	
+	<bean id="userDAO" 
+		class="net.javajigi.user.dao.OracleUserDAO"
+		p:dataSourceTransactionManager-ref="dataSourceTransactionManager"/>
+	<bean id="userService" 
+	    class="net.javajigi.user.service.UserServiceImpl"
+	    p:userDAO-ref="userDAO"
+	    p:dataSourceTransactionManager-ref="dataSourceTransactionManager"
+	    p:messageSource-ref="messageSource"/>	
+
+
+===============================================================================
+
+## [ ResourceBundleMessageSource 객체 ] 사용방법
+
+	[ 책 65 페이지 내용 확인 ]
+	<bean id="messageSource" class="org.springframework.context.support.ResourceBundleMessageSource">
+		<property name="basenames">
+			# 컬렉션 타입 프로퍼티 설정
+			<list> // List 타입에 값 목록을 전달 할 때 사용 
+				<value>message/Messages</value>
+				<ref bean>"kame.spring.chap02.HeaderFilter"</value> // 설명을 위해 임시로 만든 태그 [ 참조 객체 가능 ]
+				<value>code/Code</value> // 설명을 위해 임시로 만든 태그
+			</list>
+		</property>
+	</bean>
+	
+[ 소스/message/Messages 경로에 있는 Messages 이름을 포함한 모든  Properties 파일을 확인해서 메모리에 올려둠 ]
+
+	<bean id="dataSourceTransactionManager" class="net.javajigi.common.db.DataSourceTransactionManager"
+		p:dataSource-ref="dataSource" />
+</beans>
+
+
+
+===================================================================================
+
+# 컬렉션 타입을 입력받기 위한 스프링 태그
+Properties 타입 [ <props> </props> ]
+ Properties 타입에 < 프로퍼티이름, 프로퍼티 값 > 목록을 전달할 때 사용된다 
+List 타입 [<list>  </list> ]
+ List 타입에 값 목록을 전달 할 때 사용 
+Map 타입 [ <map> </map> ]
+Set 타입 [ <set> </set> ]
+
+
+## MessageSource객체를 실제로 사용하는 방법 
+
+import org.springframework.context.MessageSource;
+
+public class UserServiceImpl implements UserService, InitializingBean {
+
+	public int addUser(User user) throws ExistedUserException {
+		dataSourceTransactionManager.beginTransaction();
+		if (userDAO.existedUser(user.getUserId())) {
+		 // 예외가 발생했을 때 [ 저장해둔 메시지를 호출하는 방식으로 이용함 ]
+		throw new ExistedUserException(messageSource.getMessage("user.existed.exception", new Object[] { user.getUserId() }, null)); 
+		[ messageSource 객체의 getMessage( "프로퍼티 파일의 키값", 전달할 요소( 아이디 값) , 클라이언트의 언어 속성( null=브라우저 셋팅 언어값 ) ) 메서드 호출
+		}
+	
+		int result = 0;
+	               try{
+		result = userDAO.insert(user);
+		dataSourceTransactionManager.commitTransaction();
+	               }
+	               catch(DataAccessException e){
+		dataSourceTransactionManager.rollbackTransaction();
+	                 
+	                throw e;
+	                }
+		
+		if (logger.isDebugEnabled()) {
+			logger.debug("Added " + user.getUserId() + " in User System!!");
+		}
+	
+		return result;
+	}
+}
+
+## Logger 객체 [ 프레임워크 - Log4j ] 
+[ 과제 : log4j2 찾아서 등록해서 사용하기 ]	
+	
+	
+## Logging - log 남기는 동작
+System.out.println("xxx 메서드 시작"); - 디버그를 위해서 작성
+
+---------------------------------------------------------------------------------------
+
+# 로깅 프레임워크 ( OCP 연결 방식 - 객체와 객체의 연결은 인터페이스를 이용해서 느슨하게 연결한다 ) 
+
+[ 모든 로깅 프레임워크가 구현해야할 인터페이스 ]
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+
+> 아파치 log4j 프레임워크 [ 가장 범용적으로 사용되는 로깅 프레임워크 ]
+
+[ 실제로 사용되는 방법 ]
+if (logger.isDebugEnabled()) {
+	logger.debug("메서드 시작");
+
+-----------------------------------------------------------------------------------------
+
+# Log 객체의 메서드 ( 심각도가 높을 수록 아래로 )
+
+	trace
+	debug
+	info
+	warn
+	error
+	fatal
+	
+[ log4j.xml 에서 설정해주는 방법으로 전체가 관리되는 시스템 ]
+
+
+                    [ org.apache.commons.logging.LogFactory ] // 로깅 객체와 로깅 프레임워크를 연결해주는 객체  
+org.apache.commons.logging.Log   =    org.apache.commons.logging.impl.Log4JLogging
+
+----------------------------------------------------------
+## Log4j 프레임워크 [ log4j.xml 파일을 구성하는 3요소 ]
+
+1. Logger - 메시지 레벨별로 메시지를 전달받는 역할 수행
+2. Appender - 출력 대상별로 [ 콘솔, 날짜, 메일 등등] Appender가 존재
+			  전달받은 메시지를 출력대상에 전달해서 처리한다
+3. Layout - 메시지의 출력 포맷을 생성합니다
+
+========================================================================================================
+========================================================================================================
+
+[ log4j.xml 파일 ]
+
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration>
+<configuration xmlns='http://logging.apache.org/'>
+
+--------------------------------------------------------------------------------------------------------
+
+	   //1번 출력대상 방식 [ CONSOLE ] 
+	    <appender name="CONSOLE" class="org.apache.log4j.ConsoleAppender"> // 아파치에서 지원하는 내장 객체를 사용
+	
+		        <layout class="org.apache.log4j.PatternLayout"> // 메시지 출력 포멧 (=양식)
+			            <param name="ConversionPattern" value="%p - %C{1}.%M(%L) | %m%n"/>
+				[ layout 속성값 : %P : logger 객체가 요청한 메서드명 ]
+				 <param name="ConversionPattern" value="%p - %C{1}.%M(%L) | %m%n"/>        
+		        </layout>
+	    </appender>
+    
+
+	  // 2번 출력대상 방식 [ FILEAPPENDER ]
+	  <appender name="FILEAPPENDER" class="org.apache.log4j.RollingFileAppender"> // 아파치에서 지원하는 내장 객체를 사용
+		<param name="append" value="false"/> // 서버를 껏다 켜면 다시 처음부터 기록 시작
+		
+		// RollingFileAppender  객체의 속성 값
+		<param name="file" value="c:/Temp/Logs/JavaJiGiSamples-chapter3.log"/> // 파일을 저장할 경로
+		<param name="maxFileSize" value="10MB"/> // 파일의 최대 용량
+		<param name="maxBackupIndex" value="10"/> // 최대 파일을 만들 개수 
+		
+			<layout class="org.apache.log4j.PatternLayout">
+	                           <param name="ConversionPattern"value="%p - %C{1}.%M(%L) | %m%n"/>
+			</layout>
+	  </appender>    
+	
+--------------------------------------------------------------------------------------------------------
+
+	// 클래스 패스 이하로 log 객체가 DEBUG를 출력하면 모두 콘솔로 처리
+	    <root>
+	        <level value="DEBUG"/>
+			<appender-ref ref="CONSOLE"/>
+	    </root>
+	
+	  // 모든 logger 태그들은 root 설정을 상속 받는다 
+	    <logger name="org.apache">
+	        <level value="WARN"/>
+	    </logger>
+	
+	    <logger name="org.springframework">
+	        <level value="WARN"/>
+	    </logger>
+	
+	    <logger name="net.javajigi.user">
+	        <level value="DEBUG"/>
+	        <appender-ref ref="FILEAPPENDER"/>  // appender를 파일 방식으로 처리한다 
+	    </logger>	
+
+
+
+</configuration>
+
+
+
+============================================================================================
+============================================================================================
+
+## [ layout 속성값 ]
+%P : logger 객체 메서드명 
+
+%d : 로깅 이벤트가 발생한 시간을 기록합니다. 
+	%d{HH:mm:ss, SSS},
+	%d{yyyy MMM dd HH:mm:ss, SSS}
+
+%C :   logger 객체가 호출된 클래스명 
+%M :  logger 객체가 호출된 메서드명 
+%L :  logger 객체가 호출된 줄 번호
+
+%m : 로그내용이 출력 

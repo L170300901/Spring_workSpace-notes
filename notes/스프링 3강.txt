@@ -1,0 +1,350 @@
+## Model 부분 [ MVC 패턴 ] - [ applicationContext.xml 파일 ]
+
+======================================================================
+
+# OCP ( Open Closed Principal ) - 티어와 티어의 연결은 인터페이스로 한다
+
+[ 시스템을 논리적으로 분해해서 바라봄 ]  [ tier : 계층, 층 구조화 ]
+
+xxxController ------------>
+				xxxService ---------------->
+								xxxDAO ------------------->
+												jdbc--------------------> DB
+
+													
+===================================================================================================
+
+# 스프링 컨테이너 객체 [ WebApplicationContext 객체의 주요 클래스]
+
+1. Org.springframwork.context.support.ClassPathXmlApplicationContext 
+2. Org.springframwork.context.support.FileSystemXmlApplicationContext
+3. Org.springframwork.context.support.XmlWebApplicationContext
+- 웹 어플리케이션에 위치한 xml 파일로부터 설정 정보를 로딩한다
+
+
+===================================================================================================
+
+
+[ login_action.jsp 파일 ]
+
+<%@page contentType="text/html; charset=euc-kr" %>
+<%@page import="net.javajigi.user.model.User" %>
+<%@page import="net.javajigi.user.service.UserService" %>
+<%@page import="net.javajigi.user.service.UserServiceHelper" %>
+
+<%
+try {
+	String userId = request.getParameter("userId");
+	String password = request.getParameter("password");
+	
+	//모델에 로그인 작업을 위임한다.
+	UserService service = UserServiceHelper.getUserService(application);
+	service.login(userId, password);
+
+	User user = service.findUser(userId);
+	//정상적으로 로그인 되었을 경우 세션에 사용자 아이디 저장.
+	session = request.getSession();
+	session.setAttribute("user", user);
+
+	//모든 작업 완료후 이동할 페이지를 결정.
+	if( user.isAdmin() ) {
+		response.sendRedirect("user_list.jsp");
+	} else {
+		response.sendRedirect("index.jsp");
+	}
+	
+} catch (Exception e) {
+%>
+<!--
+에러가 발생할 경우 이전 페이지로 이동.
+-->
+<script language="javascript">
+alert("<%= e.getMessage() %>");
+history.back();
+</script>
+<%
+}
+%>
+
+
+================================================================================
+
+
+[ applicationContext.xml 파일 ] - SF & DAO 등을 구현
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:p="http://www.springframework.org/schema/p" 
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans   
+       http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+       http://www.springframework.org/schema/context   
+    http://www.springframework.org/schema/context/spring-context-3.0.xsd
+       http://www.springframework.org/schema/aop
+       http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+       http://www.springframework.org/schema/tx
+       http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
+
+	<context:property-placeholder location="/WEB-INF/config/jdbc.properties" />
+	
+	빈객체 1
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource"destroy-method="close">
+		<property name="driverClassName" value="${jdbc.driver}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+		<property name="maxActive" value="${jdbc.maxActive}" />
+		<property name="maxIdle" value="${jdbc.maxIdle}" />
+		<property name="maxWait" value="${jdbc.maxWait}" />
+	</bean>
+	
+	빈객체 2
+	<bean id="userDAO" class="net.javajigi.user.dao.OracleUserDAO" p:dataSourceTransactionManager-ref="dataSourceTransactionManager"/>
+	
+	빈객체 3
+	<bean id="userService" class="net.javajigi.user.service.UserServiceImpl" p:userDAO-ref="userDAO"  p:dataSourceTransactionManager-ref="dataSourceTransactionManager"
+	    p:messageSource-ref="messageSource"/>		
+	
+	빈객체 4
+	<bean id="messageSource"class="org.springframework.context.support.ResourceBundleMessageSource">
+		<property name="basenames">
+			<list>
+				<value>message/Messages</value>
+			</list>
+		</property>
+	</bean>
+	
+	빈객체 5
+	<bean id="dataSourceTransactionManager" class="net.javajigi.common.db.DataSourceTransactionManager" p:dataSource-ref="dataSource" />
+</beans>
+
+
+====================================================================================
+
+
+DispatcherServlet ---- 자식 컨테이너 
+ContextLoaderListener --- 부모 컨테이너
+
+
+[ web.xml ]
+
+  <context-param>
+    <param-name>contextConfigLocation</param-name>
+    <param-value>/WEB-INF/applicationContext*.xml</param-value>
+  </context-param>
+ 
+# Listener
+// 세션이 생성되거나 세션이 제거될 때 // 최초에 서버가 시작될 때 // 어플리 케이션이 종료 될 때 // 세션에 변수에 값이 바뀔 때 실행
+
+  <listener>
+    <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class> [ 부모 컨테이너 ]
+  </listener>
+
+[ 세션이 등록 되거나 세션이 생성되거나 제거되거나 수정될 때 호출 ] 
+
+========================================================================================================================
+
+## 데이터 소스 트렌젝션 메니져 패턴 [ DataSourceTransactionManager ]
+
+[ SF 내서 공통으로 사용할 연결 객체를 threadLocal에 저장한다 ( JVM이 SF마다 연결 객체를 관리 해준다 ) ]
+
+[ JDBC 트렌젝션 ] 
+public class DataSourceTransactionManager {
+	private DataSource dataSource;
+	private ThreadLocal<Connection> threadLocal = new ThreadLocal<Connection>();
+
+	public Connection getConnection() {
+		Connection connection = (Connection) threadLocal.get();
+		try {
+			if (connection == null) {
+				connection = dataSource.getConnection();
+				threadLocal.set(connection);
+			}
+		} catch (SQLException e) {
+			throw new DataAccessException(e.getMessage(), e);
+		}
+		return connection;
+	}
+	
+	
+[ propagation 트렌젝션의 전파 행위 ] 
+
+SF class {
+conn =getConnection();
+DAO(bean, conn); // 연결 객체를 매개변수에 담아서 전달하는 방식 
+}
+
+
+=======================================================================================================================
+
+## 서비스 로케이터 패턴 [ServiceLocator ] - JNDI 이름으로 객체를 받아와서 연결을 전달해주는 패턴
+
+[ 프로젝트  ServiceLocator 객체 파일 ]
+public class ServiceLocator {
+
+    private Map<String, DataSource> cache;
+
+    private Context envCtx;
+    private static ServiceLocator instance;
+
+    static {
+        try {
+            instance = new ServiceLocator();
+            System.out.println("		@ ServiceLocator접근");
+        } catch (ServiceLocatorException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private ServiceLocator() {
+        try {
+            envCtx = new InitialContext(); // 일종의 미들웨어 - JNDI naming service에 연결해서 이름을 가지고 객체을 찾아오는 도구
+	
+            cache = Collections.synchronizedMap(new HashMap<String, DataSource>());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ServiceLocatorException(e.getMessage());
+        }
+    }
+
+    public static ServiceLocator getInstance() {
+        return instance;
+    }
+
+    public DataSource getDataSource(String jndiName) {
+
+        DataSource dataSource;
+        System.out.println("		@ 데이터 소스 객체를 얻기 위한 메서드 getDataSource");
+        try {
+            if (cache.containsKey(jndiName)) {
+                dataSource = cache.get(jndiName);
+            } else {
+                dataSource = (DataSource) envCtx.lookup("java:comp/env/" + jndiName);  
+	    // 동기화 기능을 가진 synchronizedMap()을 이용해서 HashMap 객체를 받아옴 [ 객체를 받아온 상태에서 다른 접속은 객체를 받아갈 수 없음 ]
+                cache.put(jndiName, dataSource);
+            }
+            System.out.println("		@ jndi로 server.xml에 있는 계정 정보를 찾는다");
+            System.out.println("		@ jndi: " + jndiName);
+        } catch (NamingException e) {
+            throw new ServiceLocatorException(e.getMessage());
+
+        }
+        return dataSource;
+    }
+
+}
+
+===============================================================================================
+
+# 미들웨어
+
+JNDI (= Java Naming Derectory Interface )
+[ 문자열로 어떤 객체를 찾아서 반환하도록 만들어준 미들웨어 ]
+
+InitialContext 객체  ---------------> jndi 이름으로  (  jndi 서비스에서 객체를 찾아서 등록해둔다 )
+
+lookup () 찾는 메서드
+put () 등록하는 메서드 
+
+
+DataSourceTransactionManager
+
+DataSource : Connecttion Pool[미들웨어] 에서 connection 을 가져오기 위해 필요한 객체/도구
+[ 준비된 connection을 전달하고 트렌젝션이 완료되에 conn.close() 호출되면 connection을 Pool로 반환 재사용 ]
+
+
+
+public class UserServiceImpl implements UserService, InitializingBean {
+
+	private ApplicationContext context;
+	private DataSourceTransactionManager dataSourceTransactionManager;
+	[ 계층간의 연결은 인터 페이스로 연결 ]
+	private UserDAO userDAO; // [OCP 원칙으로 사용된 예]
+	상위 객체 인터페이스로 공개 되기 때문에 
+	하위 계층의 코드 변경 사항이 상위 계층에 영향을 주지 않는다 
+	
+
+	public void setDataSourceTransactionManager(
+			DataSourceTransactionManager dataSourceTransactionManager) {
+		this.dataSourceTransactionManager = dataSourceTransactionManager;
+	}
+
+	public void setUserDAO(UserDAO newUserDAO) {
+		this.userDAO = newUserDAO;
+	}
+
+	public void setApplicationContext(ApplicationContext context)
+			throws BeansException {
+		this.context = context;
+	}
+
+
+}
+
+
+
+
+
+# Listener [ 참고 자료 ]
+
+Servlet context events
+컨텍스트가 생성되었는지 소멸되었는지 알고 싶을때
+- javax.servlet.ServletContextListener(570p)
+ - contextInitialized
+ - contextDestroyed   
+ 이 두개를 오버라이딩하게되면 자동으로 호출됨 
+ 
+
+어플리케이션 ==> 현재접속자 수를 이용할 수 있음  
+
+웹어플리케이션 컨텍스트에 속성을 추가했는지, 제거했는지,
+수정했는지 알고 싶을때
+- javax.servlet.ServletContextAttributeListener
+ - attributeAdded
+ - attributeRemoved
+ - attributeReplaced
+
+# HTTP sessoin events 
+
+얼마나 많은 동시 사용자가 지금 물려있는지 알고 싶을때 즉, 현재활성화된 세션 정보를 알고 싶을때
+- javax.servlet.http.HttpSessionListener
+ - sessionCreated
+ - sessionDestroyed
+
+* 세션이 종료될 때 : 웹브라우저를 닫을 때, 로그아웃을 할 때 30분이 흘러야 sessionDestroyed 호출됨 -1
+
+세션 속성을 추가했는지, 제거했는지, 수정했는지 알고 싶을때
+
+- javax.servlet.http.HttpAttributeListener
+ - attributeAdded
+ - attributeRemoved
+ - attributeReplaced
+
+속성객체가 하나있는데 세션에 바인딩한 이타입의 객체가 다른 JVM으로 옮겨갔는지 아니면 옮겨왔는지를 알고싶을때 : 분산네트워크가 아니면 사용할 일이 없음 
+
+- javax.servlet.http.HttpSessionActivationListener
+ - sessionDidActive
+ - sessionWillPassivate
+
+속성객체가 하나있는데 이타입의 객체가 세션에 바인딩되었는지 아니면 제거됐는지를 알고싶을때
+- javax.servlet.http.HttpSessionBindingListener
+ - valueBound
+ - valueUnbound
+
+Servlet request events
+
+요청이 들어올때마다 이사실을 알고싶을때 로그를 남기고 싶을때
+- javax.servlet.ServletRequestListener
+ - requestInitialized
+ - requestDestroyed
+
+요청 속성을 추가했는지, 제거했는지, 수정했는지 알고 싶을때
+- javax.servlet.ServletRequestAttributeListener
+ - attributeAdded
+ - attributeRemoved
+ - attributeReplaced
+
+

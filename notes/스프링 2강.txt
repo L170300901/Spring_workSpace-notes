@@ -1,0 +1,200 @@
+[복습] Web.xml 파일의 문법 구조 ( 스프링 프레임워크의 근본 )
+
+<beans ….>
+<Bean id="handlerMapping1" class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+[ SimpleUrlHandlerMapping = 타입체크로 자동으로 찾아서 사용가능하게 해줌 ]
+
+ <Property name="order" value="0">
+ [ 객체를 읽는 순서 value 값이 작은 숫자부터 찾기 시작함 ] // 1개 이상의 HandlerMapping을 사용할 때 사용 순서 지정
+ <Property name="alwaysUseFullParth" value="false"> 
+ [ value : "false" 스프링 컨테이너 값(일반적으로 프로젝트명) 까지는 작성되어있는 상태 ] 
+
+<Property name="mappings">
+	<Props>
+		<Prop key="/homepageRegistry.do">homepageRegistryController</prop>
+		Prop
+		….
+		Prop
+	</Props>
+ </Property>
+</Bean>
+
+	1. Url 값을 바로 > 클래스와 매핑도 가능
+<bean name="/greeting/hello/html" class="kame.spring.chap04.controller.HelloController" p:me="kkk" p:filePath="d:\upload" 
+P:requireSession="true" p:cacheSecons="0" />
+	[  p:은 기본적으로 set[Key이름]=[value값]으로 사용 
+	( 중요 p: 속성값 : requireSession : "true" 세션이 있을 떄만 접근가능 ) cacheSecons :
+	( 중요 p: 속성값 : cacheSecons : 0 캐쉬 값을 저장하지 말자 // 화면을 표기하는 기능만 하는 컨트롤러의 경우 -1로 사용한다 ) 
+
+	2. 기존의 방식처럼 빈이름과 빈 객체를 매핑 
+<bean name="urlController" class="org.springframework.web.servlet.mvc.UrlFilenameViewController" />
+</beans>
+
+-------------------------------------------------------------------------------------------------------------------------------------------------
+ [ 프론트 컨트롤러 패턴 (=front controller ) - 클라이언트의 요청에 대한 중앙집중적인 접근 ( 모든 요청은 디스패처 서블릿을 통한다 )
+
+--  서블릿 컨테이너 [ 탐캣 ]     [ web.xml에 등록된 클래스들을 객체화 함 ]
+-- spring 컨테이너 [ application 객체 ]        [ 컨트롤러들을 객체화 함 ]
+
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+[ 프로젝트 chap04 ]  수업시간에 다루었던 프로젝트 파일을 분석을 하는 과정에서 기능을 확인해보자
+
+[ servlet-main.xml 파일]
+
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context" 
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans   
+       http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context-2.5.xsd">
+
+     # 1번 bean 객체 선언 [ SimpleUrlHandlerMapping ]
+	<bean id="handlerMapping1" class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+		
+		# 속성 값 지정
+		<property name="order" value="0" /> 
+		// [ 1. 속성명 : order 속성 값 : 양수  URL 메핑시 객체를 읽는 순서  ]
+		<property name="alwaysUseFullPath" value="false" /> 
+		// [ 2. 속성명 : alwaysUseFullPath 속성 값 : true (스프링 컨테이너 이름 필요)  주소에 스프링 컨테이너 이름을 포함여부  ]
+		<property name="mappings"> 
+		// [ 3. 속성명 : "mappings" ] URL 패턴 맵핑
+			
+			# SimpleUrlHandlerMapping 객체의 Mapping  [ url , bean 이름 ]
+			<props>  // 
+				<prop key="/content/**/*.htm">contentController</prop>
+				[ key : URL패턴 ] bean 이름 
+				<prop key="/**/index.htm">indexController</prop>
+				 <prop key="/greeting/hello.htm">helloController</prop> 
+				<prop key="/login.do">loginController</prop>
+				<prop key="/updateMemberInfo.do">updateMemberInfoController</prop>
+				<prop key="/homepageRegistry.do">homepageRegistryController</prop>
+				<prop key="/registMemberForm.do">registMemberFormController</prop>
+				<prop key="/registMember.do">registMemberFormController</prop>
+				<prop key="/search.htm">searchController</prop>
+				<prop key="/search/*">searchControllerUsingInternalPath</prop>
+				<prop key="/**/index.htm">indexController</prop>
+				<prop key="/bbs/index.htm">indexController</prop>
+				<prop key="/board/index.htm">indexController</prop>
+				<prop key="/company/vision.htm">urlController</prop>
+				<prop key="/company/ceo.htm">urlController</prop>
+			</props>
+		</property>
+	</bean>
+
+==================================================================================
+
+    # 2번 bean 객체 선언 [ BeanNameUrlHandlerMapping ]
+	<bean id="handlerMapping2" class="org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping">
+		
+		# 속성 값 지정
+		<property name="order" value="1" />
+		// [ 1. 속성명 : order 속성 값 : 양수  URL 메핑시 객체를 읽는 순서  ]
+		<property name="alwaysUseFullPath" value="false" />
+		// [ 2. 속성명 : alwaysUseFullPath 속성 값 : true (스프링 컨테이너 이름 필요)  주소에 스프링 컨테이너 이름을 포함여부  ]
+	</bean>
+	
+	
+	# Mapping  [ bean 이름, bean 객체 ]
+	<bean name="helloController" class="kame.spring.chap04.controller.HelloController"
+	[Name 속성 : bean 이름 ] [ class 속성 : bean 객체 ] 
+		p:me="kkk"  p:filePath="e:\upload"  // p: [ setMe("rrr"); // setFilePath("e:\upload"); ]  사용됨
+		p:requireSession="true" // 세션 값이 있을 때만 접근가능
+		p:cacheSeconds="0"  // [ 캐시를 저장하지 말아라 ]  // 화면만 표시할 경우에는 [ -1로 사용한다 ]
+	/> 
+	# Mapping  [ url이 포함하고 있는 값]  [ 빈객체 주소값 ]   
+
+</beans>
+
+ # 웹 요청과 컨트롤러 맵핑 : HandlerMapping               [ servlet-main.xml 파일] 참고
+DispatcherServlet은 클라이언트의 요청이 들어오면 해당 요청을 처리하기 위한 컨트롤러를 HandlerMapping 클래스를 이용해서 찾는다
+
+HandlerMapping 클래스 [ 스프링 프레임워크 ]
+
+1. SimpleUrlHandlerMapping
+[ Url 패턴과 컨트롤러 이름을 비교하여 Url이 패턴에 매칭될 경우 지정한 컨트롤러를 사용한다 ]
+2. BeanNameUrlHandlerMapping
+[ Url과 매칭되는 클래스 이름을 갖는 빈을 컨트롤러로 사용한다 ]
+
+## 컨트롤러의 구현 [ org.springframework.web.servlet.mvc.Controller 구현 ]
+
+ DispatcherServlet은 HandlerMapping으로부터 클래이언트의 요청을 처리할 컨트롤러 빈을 가져온 뒤 
+ handleRequest() 메서드를 호출하여 컨트롤러가 클라이언트의 요청을 처리하도록 한다
+
+
+# 컨트롤러의 종류 - [ interface Controller ] 최상위 인터페이스 [ 구현해서 사용 ]
+
+1. AbstractController (=추상 클래스) [ org.springframework.web.servlet.mvc.AbstractController ]
+ - 단순히 클라이언트의 요청을 처리한 뒤에 ModelAndView를 리턴하고 싶을 때 AbstractController를 상속 받아서 컨트롤러를 구현
+[ handleRequestInternal() 추상 메서드를 선언 ] 
+
+# AbstractController  주요 프로퍼티 
+	1. supportedMethods - 컨트롤러가 지원하는 접근방식 [기본값: ( Post, Get ) ]
+	2. requireSession - 요청을 처리하는데 HttpSession이 필요한지의 여부를 설정 [기본값: ( false) ]//( true일 경우 세션 x 예외 발생 )
+	3. cacheSeconds - 응답에 포함될 캐시 헤더의 값을 초단위로 입력 [기본값 : (-1) ] 캐시 관련 해드를 포함하지 않는다 
+      (0이면 캐시를 수행하지 않는다)
+[ 박원장님 - 모든 클래스에서 공통적으로 실행해야할 부분을 AbstractController의 handleRequest()에 포함해서 사용 ]
+
+	[ 현재 프로잭트에서는 이런식으로 사용중 ]
+	public abstract class AbstractController implements Controller {
+	        response.setHeader("Pragma", "no-cache");
+	        response.setHeader("Cache-Control", "no-cache");
+	        response.addHeader("Cache-Control", "no-store");
+	}
+
+
+=====================================================================================
+
+2. MultiActionController  [ org.springframework.web.servlet.mvc.multiaction.MultiActionController ]
+	- 일반적으로 하나의 Controller 클래스는 하나의 기능을 제공하도록 구현 경우에 따라 연관된 기능과 관련된 코드(= CRUD 작업)을
+  하나의 컨트롤러 클래스에서 구현하고 싶은 경우 사용하는 컨트롤러 ( MultiActionController는 특정 파라미터의 값이나 URL 등을 
+  이용해서 메서드의 이름을 확인하고 요청한 Controller 객체의 메서드를 호출해서 클라이언트의 요청을 처리한다
+
+# MultiActionController  주요 프로퍼티 객체  - MethodNameResolver 객체를 이용해 어떤 메서드를 이용해서 요청을 처리할지 구분 
+	1. InternalPathMethodNameResolver - URL의 마지막 경로를 메서드 이름으로 사용
+	2. PropertiesMethodNameResolver - URL과 메서드 이름의 매핑을 프로퍼티로 설정
+	3. ParameterMethodNameResolver - 특정 파라미터의 값을 메서드 이름으로 사용 ( 이것만 씀 )
+
+	[ insa2.xml 파일 ] [mode=메서드명]으로 구분
+	<bean id="searchControllerNameResolver"
+		class="org.springframework.web.servlet.mvc.multiaction.ParameterMethodNameResolver">
+		<property name="paramName" value="mode" />
+	</bean>
+
+
+=====================================================================================
+ [ DB 연동이나 별도 처리가 필요 없고 뷰 페이지를 바로 보여 주어야 하는경우 사용하는 컨트롤러 객체]
+
+3. UrlFileNameViewController -  [ org.springframework.web.servlet.mvc.UrlFilenameViewController ]  ( 계속 사용중 )
+	- 별도의 로직을 처리할 필요 없이 뷰 페이지를 바로 출력하고 싶을 때 사용 [ 접근 URL로부터 뷰 이름을 추출한다 ]
+
+[ insa2.xml 파일 ]  [ 접두사와 접미사를 지정해서 페이지 페이지 이름을 조합한다 ]
+<bean id="urlController" class="org.springframework.web.servlet.mvc.UrlFilenameViewController"p:prefix="web-inf/jsp/"  p:suffix=".jsp" />
+
+
+4. ParameterizableViewController -  [ org.springframework.web.servlet.mvc.ParameterizableViewController ]
+	- 요청 URL에 상관없이 지정한 뷰를 보여줄 때 사용한다 [빈 id] 값에 컨트롤러를 지정해두면 별도의 로직을 수행하지 않고 단순히
+	p:viewName 셋팅된 프로퍼티를 사용해서 사용될 뷰를 강제한다
+	
+	[ insa2.xml 파일 ]  comingSoonController로 접근될 경우 뷰 이름은 "comingSoon" 가 사용된다
+	<bean id="comingSoonController"
+		class="org.springframework.web.servlet.mvc.ParameterizableViewController"
+		p:viewName="comingSoon" />
+
+
+=====================================================================================
+
+## ModelAndView 클래스 -  [ org.springframework.web.servlet.ModelAndView ]
+
+	- 컨트롤러의 처리 결과를 보여줄 뷰와 뷰에 전달할 값을 저장하는 용도로 사용된다 
+
+# 리다이렉트 뷰 설정 : 뷰 이름에 "redirect:" 접두어를 붙이면 지정한 페이지로 리다이렉트 된다 
+
+	1. redirect: /상대경로
+	2. redirect: http://프로젝트명/절대경로
+

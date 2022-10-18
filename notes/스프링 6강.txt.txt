@@ -1,0 +1,106 @@
+# 회계 프로젝트 1차 소스 -> 2차로 변경
+
+[ 프로시져를 호출하는 3가지 컨트롤러를 바탕으로 학습 내용을 정리 하도록 하겠다 ]
+--------------------------------------------------------------------------------------------------------------------------------------
+ [ Controller ] -> [ ServiceFacade ] -> [ ApllicationService ] -> [ DAO ]
+
+회계 1차 [ 합계 잔액 시산표 ]
+
+public class TotalTrialBalanceController extends AbstractController {
+
+1.  AOP 객체가 대신해줌 삭제  [ 빨간 색체움 ]
+    protected final Log logger = LogFactory.getLog(this.getClass());
+
+  [DI 받아야 하는 객체]
+    private StatementServiceFacade statementServiceFacade = StatementServiceFacadeImpl.getInstance();
+
+    @Override
+    public ModelAndView handleRequestInternal(HttpServletRequest request, HttpServletResponse response) {
+        if (logger.isDebugEnabled()) {
+            logger.debug(" TotalTrialBalanceController : handleRequestInternal 시작 ");
+        }
+
+2.  JSON View 객체가 대신해줌 삭제
+        JSONObject json = new JSONObject();
+        try {
+
+            String toDate = request.getParameter("toDate");
+
+            System.out.println("		@ 조회일자: " + toDate + " 까지");
+
+            HashMap<String, Object> totalTrialBalanceMap = statementServiceFacade.getTotalTrialBalance(toDate);
+
+            String errorCode = totalTrialBalanceMap.get("errorCode").toString();
+            String errorMsg = totalTrialBalanceMap.get("errorMsg").toString();
+            	
+   
+         if (!errorCode.equals("0"))  throw new DataAccessException(errorMsg);
+           
+            json.put("totalTrialBalance", totalTrialBalanceMap.get("totalTrialBalance"));
+            json.put("errorCode", errorCode);
+            json.put("errorMsg", errorMsg);
+
+3. AOP 객체가 대신해줌 삭제
+        } catch (DataAccessException e) {
+            logger.fatal(e.getMessage());
+            json.put("errorCode", -1);
+            json.put("errorMsg", e.getMessage());
+            e.printStackTrace();
+        } catch (Exception error) {
+            logger.fatal(error.getMessage());
+            json.put("errorCode", -2);
+            json.put("errorMsg", error.getMessage());
+            error.printStackTrace();
+
+        } finally {
+            try (PrintWriter out = response.getWriter()) {
+                out.println(json);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (logger.isDebugEnabled()) {
+            logger.debug(" TotalTrialBalanceController : handleRequestInternal 종료 ");
+        }
+        return null;
+    }
+
+}
+
+
+회계 3차 [ 합계 잔액 시산표 ]
+
+public class TotalTrialBalanceController extends AbstractController {
+
+  // 스프링 컨테이너에서 DI  statementServiceFacade 객체 사용하는 방법
+    private StatementServiceFacade statementServiceFacade;
+
+    public void setStatementServiceFacade(StatementServiceFacade statementServiceFacade) {
+        this.statementServiceFacade = statementServiceFacade;
+    }
+
+    
+    @Override
+    public ModelAndView handleRequestInternal(HttpServletRequest request, HttpServletResponse response) {
+
+        ModelAndView modelAndView = new ModelAndView("jsonView");
+        String toDate = request.getParameter("toDate");
+        
+        HashMap<String, Object> totalTrialBalanceMap = statementServiceFacade.getTotalTrialBalance(toDate);
+        modelAndView.addObject("totalTrialBalance", totalTrialBalanceMap);
+
+        String errorCode = totalTrialBalanceMap.get("errorCode").toString();
+        String errorMsg = totalTrialBalanceMap.get("errorMsg").toString();
+
+        modelAndView.addObject("totalTrialBalance", totalTrialBalanceMap.get("totalTrialBalance"));
+        modelAndView.addObject("errorCode", errorCode);
+        modelAndView.addObject("errorMsg", errorMsg);
+
+        return modelAndView; // [DB 연동값 처리] & [에러코드 처리]
+    }
+
+}
+
+
+

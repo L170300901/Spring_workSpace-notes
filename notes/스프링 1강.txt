@@ -1,0 +1,239 @@
+## 스프링 1교시
+
+==========================================================================
+[ 프레임 워크 ( =Framework )]
+
+소프트웨어 어플리케이션이나 솔루션의 개발을 수월하게 하기 위해 소프트웨어의 구체적 기능들에 해당하는 부분의
+설계와 구현을 재사용 가능하도록 협업화된 형태로 제공하는 소프트웨어 환경을 말한다
+
+[ 박원장님 설명 ]
+프레임워크 -> 가져다 사용할 클래스 집합 
+==========================================================================
+
+#  스프링 프레임 워크 ( = Spring Framework )
+
+MVC 패턴의 어플리케이션
+Sum sum=New sum();
+[ web.xml ]
+
+[ JSP 페이지 지시자 처럼 사용하려면 꼭 포함시켜 줘야 하는 태그 ( 아직 모름 ) ] 
+<?xml version="1.0" encoding="UTF-8"?>
+	<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+			 xmlns="http://java.sun.com/xml/ns/j2ee"
+			 xmlns:web="http://xmlns.jcp.org/xml/ns/javaee"
+			 xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee 
+				 http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd 
+				 http://java.sun.com/xml/ns/j2ee 
+				 http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd"
+	version="2.4">
+---------------------------------------------------------------------------------------------------------------------------------------------------
+## 필터 부분 ( MVC와 동일하게 사용하는 듯 )
+	<filter>
+		<filter-name>encodingFilter</filter-name> // 필터이름
+		<filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+		// 스프링 프레임 워크가 기존의 MVC 패턴과 가장 다른점 [ 미리 만들어진 내장 객체를 사용 ]
+		
+		<init-param> // 파라미터
+			<param-name>encoding</param-name>
+			<param-value>EUC-KR</param-value>
+		</init-param>
+	</filter>
+	<filter-mapping>
+		<filter-name>encodingFilter</filter-name>
+		<url-pattern>/*</url-pattern> // URL 매핑
+	</filter-mapping>
+---------------------------------------------------------------------------------------------------------------------------------------------------
+## 서블릿 부분 ( MVC와 동일하게 사용하는 듯 )
+
+	// 1번 서블릿 [ dispatcher ]
+	<servlet>
+		<servlet-name>dispatcher</servlet-name>
+		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+		// 스프링 프레임 워크가 기존의 MVC 패턴과 가장 다른점 [ 미리 만들어진 내장 객체를 사용 ]
+		
+		<init-param> // 파라미터
+			<param-name>contextConfigLocation</param-name>
+			<param-value> // 이제 프로퍼티 파일의 경로를 저장하는것이 아니라 xml 파일의 경로를 지정
+				/WEB-INF/servlet/servlet-main.xml, /WEB-INF/servlet/servlet-main2.xml
+			</param-value>
+		</init-param>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+	
+	<servlet-mapping>
+		<servlet-name>dispatcher</servlet-name>
+		<url-pattern>*.htm</url-pattern>
+	</servlet-mapping>
+	
+	<servlet-mapping>
+		<servlet-name>dispatcher</servlet-name>
+		<url-pattern>*.do</url-pattern>
+	</servlet-mapping>
+	
+	// 2번 서블릿 [ insa ]
+	<servlet>
+		<servlet-name>insa</servlet-name>
+		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+		<init-param>
+			<param-name>contextConfigLocation</param-name>
+			<param-value>
+				/WEB-INF/servlet/servlet-insa1.xml,/WEB-INF/servlet/servlet-insa2.xml
+			</param-value>
+		</init-param>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+	
+	<servlet-mapping>
+		<servlet-name>insa</servlet-name>
+		<url-pattern>/insa/*</url-pattern>
+	</servlet-mapping>
+	
+	
+	<servlet-mapping>
+		<servlet-name>dispatcher</servlet-name>
+		<url-pattern>/search</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>dispatcher</servlet-name>
+		<url-pattern>/search/*</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>dispatcher</servlet-name>
+		<url-pattern>/bbs/*</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>dispatcher</servlet-name>
+		<url-pattern>/help/*</url-pattern>
+	</servlet-mapping>
+
+</web-app>
+
+===============================================================================================
+
+# 모든 요청은 디스패쳐 서블릿을 통한다 
+
+[ 프론트 컨트롤러 패턴(=front controller ) - 클라이언트의 요청에 대한 중앙집중적인 접근지점 ]
+
+
+
+
+
+[ 요청 처리과정 요약 ]
+	1. 클라이언트의 요청이 DispatherServlet에 전달된다
+	 [ MVC 수업기준 : URL 접근 > Web.xml에서 UrlMapping된 서블릿의 DispatherServlet 객체 doGet(), doPost( ) 호출  ]
+	2. DispatherServlet은 HandleMapping을 사용하여 클라이언트의 요청을 처리할 컨트롤러 객체를 구현한다  
+	 [ MVC 수업기준 : SimpleUrlHandlerMapping 객체의 getController() 호출 [ url 주소값과 Mapping 된 bean 이름 확인 ]
+	 [ MVC 수업기준 : ApplicationContext 객체의 getBean() 호출 [ bean이름과 Mapping 된 bean 객체 반환 ( 형변환 : Controller ) ]   
+	3. DispatherServlet은 컨트롤러 객체의 handleRequest() 메서드를 호출하여 클라이언트의 요청을 처리한다
+	 [ MVC 수업기준 : 반환받은 [요청에 따라 다른] Controller 객체의 handleRequest() 호출 ]
+	4. 컨트롤러의 handleRequest() 메서드는 처리 결과 정보를 담은 ModelAndView 객체를 리턴한다
+	 [ MVC 수업기준 : 여기서 부터는 분기점이 생김 [ 결과값 :  ModelAndView 객체 반환 ] ]
+	5.  DispatherServlet은 ViewResolver로 부터 응답 결과를 생성할 뷰 객체를 구한다 
+	 [ MVC 수업기준 :  InternalResolseViewResolver 객체의 viewResolver() 호출 ]
+	6. 뷰는 클라이언트에 전송할 응답을 생성한다 
+	 [ MVC 수업기준 :  viewName 값에 따른 화면이동 [ RequestDispather 객체를 이용한 ( forward 방식 ), response 객체를 이용한 (sendRedirect 방식)
+	  
+===============================================================================================
+
+컨테이너 -- 객체를 생성하고 라이프 사이클을 관리하는 애
+
+컨테이너 
+-- 서블릿 컨테이너 [ 탐캣 ]
+-- ejb 컨테이너 
+-- spring 컨테이너 [ Application Context객체 ]
+
+===============================================================================================
+
+[ /WEB-INF/servlet/servlet-main.xml 파일 ]  - properties 파일이 전부 사라지고 xml 파일로 대체됨 
+
+[ JSP 페이지 지시자 처럼 사용하려면 꼭 포함시켜 줘야 하는 태그 ( 아직 모름 ) ] 
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context" 
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans   
+       http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context-2.5.xsd">
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	// 기존의  [ 서블릿의 init() 메서드를 통해 properties 파일의 객체를 생성 등록하던 작업이 xml 파일로 이동 간략화됨 ]
+	   [ MVC 패턴의 주요 객체들의 객체 생성 및 초기화 또한 xml 파일 내부에서 처리 ] 내장 객체를 사용하면서 전반적으로 기능을 간편하게 구현가능
+	
+	// 일반적인 bean 선언  : < bean 태그 이용 > 
+	<bean id="handlerMapping1" class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">  
+	[ SimpleUrlHandlerMapping = 타입체크로 자동으로 찾아서 사용가능하게 해줌 ]
+	[ id  : 식별이름 ( bean 객체를 구별할 수 있는 이름 )  class : bean 객체의 전체 경로 ]
+	
+	// [ Spring Framework] 에서는 SimpleUrlHandlerMapping이 참조하고 있었던 urlMapping.properties 파일의 내용이 여기에 자리함
+	<property name="order" value="0" />
+		<property name="alwaysUseFullPath" value="false" />
+		
+		<property name="mappings">
+			<props>  
+			       [key : url이 포함하고 있는 값 ] : [ value : bean이름 (컨트롤러 이름) ]
+				<prop key="/content/**/*.htm">contentController</prop>
+				<prop key="/**/index.htm">indexController</prop>
+				<prop key="/greeting/hello.htm">helloController</prop>
+				<prop key="/login.do">loginController</prop>
+				<prop key="/updateMemberInfo.do">updateMemberInfoController</prop>
+				<prop key="/homepageRegistry.do">homepageRegistryController</prop>
+				<prop key="/registMemberForm.do">registMemberFormController</prop>
+				<prop key="/registMember.do">registMemberFormController</prop>
+				<prop key="/search.htm">searchController</prop>
+				<prop key="/search/*">searchControllerUsingInternalPath</prop>
+				<prop key="/**/index.htm">indexController</prop>
+				<prop key="/bbs/index.htm">indexController</prop>
+				<prop key="/board/index.htm">indexController</prop>
+				<prop key="/company/vision.htm">urlController</prop>
+				<prop key="/company/ceo.htm">urlController</prop>
+			</props>
+		</property>
+		
+	</bean>
+	
+	<bean id="handlerMapping2" class="org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping">
+		<property name="order" value="1" />
+		<property name="alwaysUseFullPath" value="false" />
+	</bean>
+	
+	// [ Spring Framework] 에서는  ApplicationContext가 참조하고 있던 [서블릿명].properties 파일의 내용이 여기에 자리함
+	<bean name="helloController" class="kame.spring.chap04.controller.HelloController"p:me="kkk"  p:filePath="e:\upload" 
+	p:requireSession="true" p:cacheSeconds="0" /> 
+		
+		          [ url이 포함하고 있는 값]  [ 빈객체 주소값 ]         파라미터 셋팅     [ setMe("rrr"); // setFilePath("e:\upload"); ]
+	<bean name="/greeting/hello.htm" class="kame.spring.chap04.controller.HelloController" p:me="rrr" p:filePath="e:\upload" />
+	    
+		     [ 빈이름 (컨트롤러) ]  [ 빈객체 주소값 ]                                     파라미터 셋팅     [ ViewName("index"); /
+	<bean id="indexController"class="org.springframework.web.servlet.mvc.ParameterizableViewController" p:viewName="index" />
+		       [ 빈이름 (컨트롤러) ]  [ 빈객체 주소값 ]
+	<bean id="urlController" class="org.springframework.web.servlet.mvc.UrlFilenameViewController" />
+	
+</beans>
+
+
+
+[ ApplicationContext = 타입체크로 자동으로 찾아서 사용가능하게 해줌 ]
+[ SimpleUrlHandlerMapping = 타입체크로 자동으로 찾아서 사용가능하게 해줌 ]
+[ InternalResourceViewResolver = 타입체크로 자동으로 찾아서 사용가능하게 해줌 ]
+
+
+
+==================================================================
+	<bean name="/greeting/hello.htm" 
+	class="kame.spring.chap04.controller.HelloController"
+	    p:me="rrr"
+		p:filePath="e:\upload" />
+		
+## 의존성 주입 [ 스프링 프래임 워크에 강력한 가능 ]
+dependency injection [ DI ] 
+
+==================================================================
+
+[ 탬플릿 메서드 패턴 ]
+
+추상 클래스 에서 늘 항상 사용하는 기능 처리
+
+handleRequest에서 개별적인 기능 처리 
+
+===================================================================

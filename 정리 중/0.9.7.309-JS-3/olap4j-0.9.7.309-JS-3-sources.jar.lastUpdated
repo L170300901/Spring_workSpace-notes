@@ -1,0 +1,6 @@
+#NOTE: This is a Maven Resolver internal implementation file, its format can be changed without prior notice.
+#Fri Aug 06 10:03:57 KST 2021
+https\://repo.maven.apache.org/maven2/.lastUpdated=1628211837255
+http\://repo.boundlessgeo.com/main/.error=Could not transfer artifact org.olap4j\:olap4j\:jar\:sources\:0.9.7.309-JS-3 from/to oracle (http\://repo.boundlessgeo.com/main/)\: repo.boundlessgeo.com
+@default-oracle-http\://repo.boundlessgeo.com/main/.lastUpdated=1628211836554
+https\://repo.maven.apache.org/maven2/.error=
